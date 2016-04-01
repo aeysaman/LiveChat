@@ -1,4 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System;
 using System.Net;
 using System.IO;
 using System.Collections.Generic;
@@ -7,7 +12,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Web;
 
-namespace Test
+namespace LiveChat_Gathering
 {
     class Program
     {
@@ -15,7 +20,7 @@ namespace Test
         {
             LiveChatApi.Api Api = new LiveChatApi.Api("a.tomic@bc.edu", "3302ee3a4cfd5ba8cadb2515df64168e");
             //getAgent(Api).Wait();
-            getChats(Api).Wait();
+            getChat(Api).Wait();
             //getTotalChats(Api).Wait();
         }
         static async Task getAgents(LiveChatApi.Api Api)
@@ -43,7 +48,6 @@ namespace Test
             parameters.Add("query", "test");
             parameters.Add("agent", "a.tomic@bc.edu");
             string result = await Api.Archives.Get(parameters);
-            //Chat foo = (Chat)JavaScriptConvert.DeserializeObjext(result);
 
             Console.WriteLine(result);
             Console.ReadKey();
@@ -53,10 +57,12 @@ namespace Test
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             string chatID = "NXV13D0HIN";
             string result = await Api.Archives.Get(chatID);
-            //Chat foo = (Chat)JavaScriptConvert.DeserializeObjext(result);
-            //DataContractJsonSerializer test = new DataContractJsonSerializer(typeof(Chat));
+            DataContractJsonSerializer json = new DataContractJsonSerializer(typeof(Chat));
+            MemoryStream ms = new MemoryStream(System.Text.ASCIIEncoding.ASCII.GetBytes(result));
+            Chat c = (Chat)json.ReadObject(ms);
+            Console.WriteLine(c.type + " " + c.visitor_ip);
 
-            Console.WriteLine(result);
+            //Console.WriteLine(result);
             Console.ReadKey();
         }
         static async Task getAgent(LiveChatApi.Api Api)
@@ -64,58 +70,97 @@ namespace Test
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             parameters.Add("login", "a.tomic@bc.edu");
             string result = await Api.Agents.Add(parameters);
-            //DataContractJsonSerializer test = new DataContractJsonSerializer(typeof(Agent));
+            DataContractJsonSerializer test = new DataContractJsonSerializer(typeof(Agent));
 
             Console.WriteLine(result);
             Console.ReadKey();
         }
-        //[DataContract]
+        [DataContract]
         public class Chat
         {
-            public string type { get; set; }
-            public string id { get; set; }
-            public string[] tickets { get; set; }
-            public string visitor_name { get; set; }
-            public string visitor_ip { get; set; }
-            public string message_id { get; set; }
+            [DataMember]
+            public string type;
+            [DataMember]
+            public string id;
+            [DataMember]
+            public string[] tickets;
+            [DataMember]
+            public string visitor_name;
+            [DataMember]
+            public string visitor_ip;
+            [DataMember]
+            public string message_id;
+            [DataMember]
             public Visitor visitor;
-            public Message[] messages { get; set; }
-            public Agent[] agents { get; set; }
-            public string rate { get; set; }
-            public int duration { get; set; }
-            public string chat_start_url { get; set; }
-            public string referrer { get; set; }
-            public bool pending { get; set; }
-            public string timezone { get; set; }
-            public string started { get; set; }
-            public string started_timestamp { get; set; }
-            public string ended_timestamp { get; set; }
-            public string ended { get; set; }
+            [DataMember]
+            public Message[] messages;
+            [DataMember]
+            public Agent[] agents;
+            [DataMember]
+            public string rate;
+            [DataMember]
+            public int duration;
+            [DataMember]
+            public string chat_start_url;
+            [DataMember]
+            public string referrer;
+            [DataMember]
+            public bool pending;
+            [DataMember]
+            public string timezone;
+            [DataMember]
+            public string started;
+            [DataMember]
+            public string started_timestamp;
+            [DataMember]
+            public string ended_timestamp;
+            [DataMember]
+            public string ended;
         }
+        [DataContract]
         public class Message
         {
-            public string author_name { get; set; }
-            public string text { get; set; }
-            public string date { get; set; }
-            public string timestamp { get; set; }
-            public string agent_id { get; set; }
-            public string type { get; set; }
+            [DataMember]
+            public string author_name;
+            [DataMember]
+            public string text;
+            [DataMember]
+            public string date;
+            [DataMember]
+            public string timestamp;
+            [DataMember]
+            public string agent_id;
+            [DataMember]
+            public string type;
         }
+        [DataContract]
         public class Visitor
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public string ip { get; set; }
-            public string city { get; set; }
-            public string region { get; set; }
-            public string country { get; set; }
-            public string country_code { get; set; }
-            public string timezone { get; set; }
+            [DataMember]
+            public string id;
+            [DataMember]
+            public string name;
+            [DataMember]
+            public string ip;
+            [DataMember]
+            public string city;
+            [DataMember]
+            public string region;
+            [DataMember]
+            public string country;
+            [DataMember]
+            public string country_code;
+            [DataMember]
+            public string timezone;
         }
+        [DataContract]
         public class Agent
         {
-            public string display_name { get; set; }
-            public string email { get; set; }
+            [DataMember]
+            public string display_name;
+            [DataMember]
+            public string email;
+            
         }
     }
 }
