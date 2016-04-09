@@ -15,25 +15,60 @@ namespace LiveChat_Gathering
     {
         static void Main(string[] args)
         {
+            try {
+                start().Wait();
+            }
+            catch(System.AggregateException e)
+            {
+                Console.WriteLine("Cannot write to file, please close output file and rerun");
+            }
+            Console.ReadKey();
+        }
+        static async Task start()
+        {
             LiveChatApi.Api Api = new LiveChatApi.Api("a.tomic@bc.edu", "3302ee3a4cfd5ba8cadb2515df64168e");
-            getChats(Api).Wait();
+            FullAgent[] agents = await getAgents(Api);
+            Console.WriteLine("agent count: " + agents.Length);
+            Dictionary<String, Chat> allChats = new Dictionary<string, Chat>();
+            foreach (FullAgent f in agents)
+            {
+                Console.WriteLine("{0};{1}", f.name, f.login);
+                Chat[] current = await getChats(Api, f.login);
+                foreach(Chat foo in current)
+                {
+                    if (!allChats.ContainsKey(foo.id))
+                    {
+                        allChats.Add(foo.id, foo);
+                    }
+                }
+            }
+            exportChats(allChats);
             //getChat(Api).Wait();
         }
+        static async Task<FullAgent[]> getAgents(LiveChatApi.Api Api)
+        {
+            String result = await Api.Agents.List();
+            DataContractJsonSerializer json = new DataContractJsonSerializer(typeof(FullAgent[]));
+            MemoryStream ms = new MemoryStream(System.Text.ASCIIEncoding.ASCII.GetBytes(result));
+            FullAgent[] agents = (FullAgent[])json.ReadObject(ms);
+            
+            return agents;
+        }
         //gathers Chats from API, serializes from Json, and exports this ChatGroup
-        static async Task getChats(LiveChatApi.Api Api)
+        static async Task<Chat[]> getChats(LiveChatApi.Api Api, String agent)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             parameters.Add("date_from", "2015-01-01");
-            //parameters.Add("agent", "a.tomic@bc.edu");
+            parameters.Add("agent", agent);
+            
             string result = await Api.Archives.Get(parameters);
-            //Console.WriteLine(result);
+
             DataContractJsonSerializer json = new DataContractJsonSerializer(typeof(ChatGroup));
             MemoryStream ms = new MemoryStream(System.Text.ASCIIEncoding.ASCII.GetBytes(result));
-            Console.WriteLine(result);
             ChatGroup chats = (ChatGroup)json.ReadObject(ms);
             
-            Console.WriteLine("getChats" + chats.chats.Length);
-            exportChats(chats);
+            Console.WriteLine("getChats " + chats.chats.Length);
+            return chats.chats;
         }
         static async Task getChat(LiveChatApi.Api Api)
         {
@@ -46,7 +81,6 @@ namespace LiveChat_Gathering
             Console.WriteLine(result);
             //Console.WriteLine(exportMessages(c.messages));
 
-            Console.ReadKey();
         }
         [DataContract]
         public class ChatGroup
@@ -69,12 +103,13 @@ namespace LiveChat_Gathering
                 return " ";
             }
         }
-        static void exportChats(ChatGroup chats)
+        static void exportChats(Dictionary<String, Chat> foo)
         {
-            Console.WriteLine("export" + chats.chats.Length);
+            Chat[] chats = foo.Values.ToArray();
+            Console.WriteLine("export" + chats.Length);
             var csv = new StringBuilder();
             csv.AppendLine("Chat ID,Visitor Name,Visitor ID,Visitor Email,Visitor Country,Visitor Region,Visitor City,Start Date,End Date,Agents, Messages Text");
-            foreach (Chat c in chats.chats)
+            foreach (Chat c in chats)
             {
                 String s = exportChat(c);
                 //Console.WriteLine(s);
@@ -82,7 +117,6 @@ namespace LiveChat_Gathering
             }
             File.WriteAllText("chats.csv", csv.ToString());
             Console.WriteLine("All Done!");
-            Console.ReadKey();
         }
         [DataContract]
         public class Chat
@@ -109,14 +143,8 @@ namespace LiveChat_Gathering
         }
         public static String exportDate(String d)
         {
-            try {
-                DateTime date = DateTime.Parse(d);
-                return date.ToString("yyyy/MM/dd HH:mm");
-            }
-            catch (Exception e)
-            {
-                return " ";
-            }
+            DateTime date = DateTime.Parse(d);
+            return date.ToString("yyyy/MM/dd HH:mm");
         }
         public static String exportMessages(Message[] ls)
         {
@@ -129,7 +157,6 @@ namespace LiveChat_Gathering
                     dict[d] = dict[d] + "|" + m.text;
                 else
                     dict.Add(d, m.text);
-
             }
             List<DateTime> dates = dict.Keys.ToList();
             dates.Sort();
@@ -139,7 +166,7 @@ namespace LiveChat_Gathering
                 //Console.WriteLine("{0} -> {1} ", d.ToString("yyyy/MM/dd HH:mm"), dict[d]);
             }
             String strFinal = str.ToString();
-            strFinal = strFinal.Replace(",", "*");
+            strFinal = strFinal.Replace(",", "*").Replace("\n", " ").Replace("\t", " ").Replace("\r", " ");
             return strFinal.Substring(0, strFinal.Length - 1) ;
         }
         [DataContract]
@@ -160,13 +187,8 @@ namespace LiveChat_Gathering
         }
         public static String exportVisitor(Visitor v)
         {
-            try { return String.Format("{0},{1},{2},{3},{4},{5}",
+            return String.Format("{0},{1},{2},{3},{4},{5}",
                 v.name, v.id, v.email, v.country, v.region, v.city);
-            }
-            catch(Exception e)
-            {
-                return ",,,,,";
-            }
         }
         [DataContract]
         public class Visitor
@@ -209,6 +231,22 @@ namespace LiveChat_Gathering
             [DataMember]
             public string email;
             
+        }
+        [DataContract]
+        public class FullAgent
+        {
+            [DataMember]
+            public string name;
+            [DataMember]
+            public string permission;
+            [DataMember]
+            public string avatar;
+            [DataMember]
+            public string login;
+            [DataMember]
+            public string status;
+            [DataMember]
+            public string[] group_ids;
         }
     }
 }
